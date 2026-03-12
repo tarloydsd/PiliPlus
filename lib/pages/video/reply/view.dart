@@ -100,6 +100,23 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                         ),
                         Row(
                           children: [
+                            // 刷新按钮
+                            TextButton.icon(
+                              style: StyleString.buttonStyle,
+                              onPressed: _videoReplyController.onRefresh,
+                              icon: Icon(
+                                Icons.refresh,
+                                size: 16,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              label: Text(
+                                '刷新',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.secondary,
+                                ),
+                              ),
+                            ),
                             // 只看UP主按钮
                             Obx(
                               () => TextButton.icon(
@@ -206,7 +223,12 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                 final upMid = _videoReplyController.upMid;
                 // 根据只看UP主状态过滤评论
                 final filteredResponse = showOnlyUp && upMid != null
-                    ? response.where((item) => item.mid == upMid).toList()
+                    ? response.where((item) => 
+                        // 显示UP主自己的评论
+                        item.mid == upMid ||
+                        // 显示有UP主回复的评论
+                        item.replies.any((reply) => reply.mid == upMid)
+                      ).toList()
                     : response;
                 return SliverList.builder(
                   itemBuilder: (context, index) {

@@ -98,23 +98,52 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
-                        TextButton.icon(
-                          style: StyleString.buttonStyle,
-                          onPressed: _videoReplyController.queryBySort,
-                          icon: Icon(
-                            Icons.sort,
-                            size: 16,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          label: Obx(
-                            () => Text(
-                              _videoReplyController.sortType.value.label,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: theme.colorScheme.secondary,
+                        Row(
+                          children: [
+                            // 只看UP主按钮
+                            Obx(
+                              () => TextButton.icon(
+                                style: StyleString.buttonStyle,
+                                onPressed: _videoReplyController.toggleShowOnlyUp,
+                                icon: Icon(
+                                  _videoReplyController.showOnlyUp.value
+                                      ? Icons.person
+                                      : Icons.person_outline,
+                                  size: 16,
+                                  color: _videoReplyController.showOnlyUp.value
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.secondary,
+                                ),
+                                label: Text(
+                                  '只看UP主',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _videoReplyController.showOnlyUp.value
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.secondary,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            TextButton.icon(
+                              style: StyleString.buttonStyle,
+                              onPressed: _videoReplyController.queryBySort,
+                              icon: Icon(
+                                Icons.sort,
+                                size: 16,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              label: Obx(
+                                () => Text(
+                                  _videoReplyController.sortType.value.label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -172,46 +201,74 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
       ),
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverList.builder(
-                itemBuilder: (context, index) {
-                  if (index == response.length) {
-                    _videoReplyController.onLoadMore();
-                    return Container(
-                      height: 125,
-                      alignment: Alignment.center,
-                      margin: EdgeInsets.only(bottom: bottom),
-                      child: Text(
-                        _videoReplyController.isEnd ? '没有更多了' : '加载中...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
+            ? Obx(() {
+                final showOnlyUp = _videoReplyController.showOnlyUp.value;
+                final upMid = _videoReplyController.upMid;
+                // 根据只看UP主状态过滤评论
+                final filteredResponse = showOnlyUp && upMid != null
+                    ? response.where((item) => item.mid == upMid).toList()
+                    : response;
+                return SliverList.builder(
+                  itemBuilder: (context, index) {
+                    if (index == filteredResponse.length) {
+                      // 如果开启了只看UP主，不加载更多（因为服务端不支持筛选）
+                      if (showOnlyUp) {
+                        return Container(
+                          height: 125,
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.only(bottom: bottom),
+                          child: Text(
+                            '没有更多了',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        );
+                      }
+                      _videoReplyController.onLoadMore();
+                      return Container(
+                        height: 125,
+                        alignment: Alignment.center,
+                        margin: EdgeInsets.only(bottom: bottom),
+                        child: Text(
+                          _videoReplyController.isEnd ? '没有更多了' : '加载中...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.outline,
+                          ),
                         ),
-                      ),
-                    );
-                  } else {
-                    return ReplyItemGrpc(
-                      replyItem: response[index],
-                      replyLevel: widget.replyLevel,
-                      replyReply: replyReply,
-                      onReply: _videoReplyController.onReply,
-                      onDelete: (item, subIndex) =>
-                          _videoReplyController.onRemove(index, item, subIndex),
-                      upMid: _videoReplyController.upMid,
-                      getTag: () => heroTag,
-                      onCheckReply: (item) => _videoReplyController
-                          .onCheckReply(item, isManual: true),
-                      onToggleTop: (item) => _videoReplyController.onToggleTop(
-                        item,
-                        index,
-                        _videoReplyController.aid,
-                        _videoReplyController.videoType.replyType,
-                      ),
-                    );
-                  }
-                },
-                itemCount: response.length + 1,
-              )
+                      );
+                    } else {
+                      // 找到原始列表中的索引用于删除操作
+                      final originalIndex = showOnlyUp
+                          ? response.indexOf(filteredResponse[index])
+                          : index;
+                      return ReplyItemGrpc(
+                        replyItem: filteredResponse[index],
+                        replyLevel: widget.replyLevel,
+                        replyReply: replyReply,
+                        onReply: _videoReplyController.onReply,
+                        onDelete: (item, subIndex) =>
+                            _videoReplyController.onRemove(originalIndex, item, subIndex),
+                        upMid: _videoReplyController.upMid,
+                        getTag: () => heroTag,
+                        onCheckReply: (item) => _videoReplyController
+                            .onCheckReply(item, isManual: true),
+                        onToggleTop: (item) => _videoReplyController.onToggleTop(
+                          item,
+                          originalIndex,
+                          _videoReplyController.aid,
+                          _videoReplyController.videoType.replyType,
+                        ),
+                      );
+                    }
+                  },
+                  itemCount: filteredResponse.length + 1,
+                );
+              })
             : HttpError(
                 errMsg: '还没有评论',
                 onReload: _videoReplyController.onReload,

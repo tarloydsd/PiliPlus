@@ -119,16 +119,45 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
                 );
               },
             ),
-            TextButton.icon(
-              style: StyleString.buttonStyle,
-              onPressed: controller.queryBySort,
-              icon: Icon(Icons.sort, size: 16, color: secondary),
-              label: Obx(
-                () => Text(
-                  controller.sortType.value.label,
-                  style: TextStyle(fontSize: 13, color: secondary),
+            Row(
+              children: [
+                // 只看UP主按钮
+                Obx(
+                  () => TextButton.icon(
+                    style: StyleString.buttonStyle,
+                    onPressed: controller.toggleShowOnlyUp,
+                    icon: Icon(
+                      controller.showOnlyUp.value
+                          ? Icons.person
+                          : Icons.person_outline,
+                      size: 16,
+                      color: controller.showOnlyUp.value
+                          ? theme.colorScheme.primary
+                          : secondary,
+                    ),
+                    label: Text(
+                      '只看UP主',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: controller.showOnlyUp.value
+                            ? theme.colorScheme.primary
+                            : secondary,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                TextButton.icon(
+                  style: StyleString.buttonStyle,
+                  onPressed: controller.queryBySort,
+                  icon: Icon(Icons.sort, size: 16, color: secondary),
+                  label: Obx(
+                    () => Text(
+                      controller.sortType.value.label,
+                      style: TextStyle(fontSize: 13, color: secondary),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -147,46 +176,73 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
       ),
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverList.builder(
-                itemCount: response.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == response.length) {
-                    controller.onLoadMore();
-                    return Container(
-                      alignment: Alignment.center,
-                      margin: EdgeInsets.only(bottom: padding.bottom),
-                      height: 125,
-                      child: Text(
-                        controller.isEnd ? '没有更多了' : '加载中...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
+            ? Obx(() {
+                final showOnlyUp = controller.showOnlyUp.value;
+                final upMid = controller.upMid;
+                // 根据只看UP主状态过滤评论
+                final filteredResponse = showOnlyUp && upMid != null
+                    ? response.where((item) => item.mid == upMid).toList()
+                    : response;
+                return SliverList.builder(
+                  itemCount: filteredResponse.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == filteredResponse.length) {
+                      // 如果开启了只看UP主，不加载更多（因为服务端不支持筛选）
+                      if (showOnlyUp) {
+                        return Container(
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.only(bottom: padding.bottom),
+                          height: 125,
+                          child: Text(
+                            '没有更多了',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        );
+                      }
+                      controller.onLoadMore();
+                      return Container(
+                        alignment: Alignment.center,
+                        margin: EdgeInsets.only(bottom: padding.bottom),
+                        height: 125,
+                        child: Text(
+                          controller.isEnd ? '没有更多了' : '加载中...',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.outline,
+                          ),
                         ),
-                      ),
-                    );
-                  } else {
-                    return ReplyItemGrpc(
-                      replyItem: response[index],
-                      replyLevel: 1,
-                      replyReply: (replyItem, id) =>
-                          replyReply(context, replyItem, id, theme),
-                      onReply: controller.onReply,
-                      onDelete: (item, subIndex) =>
-                          controller.onRemove(index, item, subIndex),
-                      upMid: controller.upMid,
-                      onViewImage: hideFab,
-                      onCheckReply: (item) =>
-                          controller.onCheckReply(item, isManual: true),
-                      onToggleTop: (item) => controller.onToggleTop(
-                        item,
-                        index,
-                        controller.oid,
-                        controller.replyType,
-                      ),
-                    );
-                  }
-                },
-              )
+                      );
+                    } else {
+                      // 找到原始列表中的索引用于删除操作
+                      final originalIndex = showOnlyUp
+                          ? response.indexOf(filteredResponse[index])
+                          : index;
+                      return ReplyItemGrpc(
+                        replyItem: filteredResponse[index],
+                        replyLevel: 1,
+                        replyReply: (replyItem, id) =>
+                            replyReply(context, replyItem, id, theme),
+                        onReply: controller.onReply,
+                        onDelete: (item, subIndex) =>
+                            controller.onRemove(originalIndex, item, subIndex),
+                        upMid: controller.upMid,
+                        onViewImage: hideFab,
+                        onCheckReply: (item) =>
+                            controller.onCheckReply(item, isManual: true),
+                        onToggleTop: (item) => controller.onToggleTop(
+                          item,
+                          originalIndex,
+                          controller.oid,
+                          controller.replyType,
+                        ),
+                      );
+                    }
+                  },
+                );
+              })
             : HttpError(
                 errMsg: '还没有评论',
                 onReload: controller.onReload,

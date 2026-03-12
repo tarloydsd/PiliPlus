@@ -30,6 +30,9 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   FeedPaginationReply? paginationReply;
   late bool hasUpTop = false;
 
+  // 只看UP主筛选
+  final RxBool showOnlyUp = false.obs;
+
   @override
   bool? get hasFooter => true;
 
@@ -103,6 +106,13 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     }
     feedBack();
     onReload();
+  }
+
+  // 切换只看UP主
+  void toggleShowOnlyUp() {
+    feedBack();
+    showOnlyUp.value = !showOnlyUp.value;
+    loadingState.refresh();
   }
 
   (bool inputDisable, String? hint) get replyHint {

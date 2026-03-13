@@ -49,12 +49,35 @@ jobs:
         run: |
           fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json"
 
+      - name: Find build outputs
+        run: |
+          Write-Host "Checking build outputs..."
+          if (Test-Path "build/windows/x64/runner/Release") {
+            Write-Host "Found: build/windows/x64/runner/Release"
+            Get-ChildItem "build/windows/x64/runner/Release"
+          }
+          if (Test-Path "dist") {
+            Write-Host "Found: dist directory"
+            Get-ChildItem "dist" -Recurse
+          }
+        shell: pwsh
+
       - name: Prepare Upload
         run: |
           mkdir -p Release/PiliPlus-Win
           mkdir -p PiliPlus-Win-Setup
-          mv build/windows/x64/runner/Release/* Release/PiliPlus-Win/
-          mv dist/**/*.exe PiliPlus-Win-Setup/PiliPlus_windows_${{env.version}}_x64_setup.exe
+          if (Test-Path "build/windows/x64/runner/Release") {
+            Write-Host "Using build/windows/x64/runner/Release"
+            mv build/windows/x64/runner/Release/* Release/PiliPlus-Win/
+          } elseif (Get-ChildItem "dist" -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue) {
+            Write-Host "Using dist directory"
+            Get-ChildItem "dist" -Recurse -Filter "*.exe" | Copy-Item -Destination "Release/PiliPlus-Win/" -ErrorAction SilentlyContinue
+          }
+          if (Get-ChildItem "dist" -Recurse -Filter "*setup*.exe" -ErrorAction SilentlyContinue) {
+            mv dist/**/*setup*.exe PiliPlus-Win-Setup/PiliPlus_windows_${{env.version}}_x64_setup.exe
+          } else {
+            mv dist/**/*.exe PiliPlus-Win-Setup/PiliPlus_windows_${{env.version}}_x64_setup.exe 2>$null
+          }
 
       - name: Compress
         run: |

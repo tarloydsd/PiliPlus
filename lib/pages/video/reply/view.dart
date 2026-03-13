@@ -121,25 +121,41 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                             Obx(
                               () => TextButton.icon(
                                 style: StyleString.buttonStyle,
-                                onPressed: _videoReplyController.toggleShowOnlyUp,
-                                icon: Icon(
-                                  _videoReplyController.showOnlyUp.value
-                                      ? Icons.person
-                                      : Icons.person_outline,
-                                  size: 16,
-                                  color: _videoReplyController.showOnlyUp.value
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.secondary,
-                                ),
-                                label: Text(
-                                  '只看UP主',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: _videoReplyController.showOnlyUp.value
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.secondary,
-                                  ),
-                                ),
+                                onPressed: _videoReplyController.isLoadingAllReplies.value
+                                    ? null
+                                    : _videoReplyController.toggleShowOnlyUp,
+                                icon: _videoReplyController.isLoadingAllReplies.value
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Icon(
+                                        _videoReplyController.showOnlyUp.value
+                                            ? Icons.person
+                                            : Icons.person_outline,
+                                        size: 16,
+                                        color: _videoReplyController.showOnlyUp.value
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.secondary,
+                                      ),
+                                label: _videoReplyController.isLoadingAllReplies.value
+                                    ? Text(
+                                        '加载中...',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      )
+                                    : Text(
+                                        '只看UP主',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: _videoReplyController.showOnlyUp.value
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.secondary,
+                                        ),
+                                      ),
                               ),
                             ),
                             TextButton.icon(

@@ -142,25 +142,41 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
                 Obx(
                   () => TextButton.icon(
                     style: StyleString.buttonStyle,
-                    onPressed: controller.toggleShowOnlyUp,
-                    icon: Icon(
-                      controller.showOnlyUp.value
-                          ? Icons.person
-                          : Icons.person_outline,
-                      size: 16,
-                      color: controller.showOnlyUp.value
-                          ? theme.colorScheme.primary
-                          : secondary,
-                    ),
-                    label: Text(
-                      '只看UP主',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: controller.showOnlyUp.value
-                            ? theme.colorScheme.primary
-                            : secondary,
-                      ),
-                    ),
+                    onPressed: controller.isLoadingAllReplies.value
+                        ? null
+                        : controller.toggleShowOnlyUp,
+                    icon: controller.isLoadingAllReplies.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            controller.showOnlyUp.value
+                                ? Icons.person
+                                : Icons.person_outline,
+                            size: 16,
+                            color: controller.showOnlyUp.value
+                                ? theme.colorScheme.primary
+                                : secondary,
+                          ),
+                    label: controller.isLoadingAllReplies.value
+                        ? Text(
+                            '加载中...',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: theme.colorScheme.outline,
+                            ),
+                          )
+                        : Text(
+                            '只看UP主',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: controller.showOnlyUp.value
+                                  ? theme.colorScheme.primary
+                                  : secondary,
+                            ),
+                          ),
                   ),
                 ),
                 TextButton.icon(

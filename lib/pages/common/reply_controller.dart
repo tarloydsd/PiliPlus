@@ -33,6 +33,9 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   // 只看UP主筛选
   final RxBool showOnlyUp = false.obs;
 
+  // 加载所有评论的加载状态
+  final RxBool isLoadingAllReplies = false.obs;
+
   @override
   bool? get hasFooter => true;
 
@@ -109,8 +112,30 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   }
 
   // 切换只看UP主
-  void toggleShowOnlyUp() {
+  Future<void> toggleShowOnlyUp() async {
     feedBack();
+    
+    // 如果是开启只看UP主，需要先加载所有评论
+    if (!showOnlyUp.value) {
+      // 检查是否已经加载了所有评论
+      if (!isEnd && (loadingState.value case Success(:final response))) {
+        isLoadingAllReplies.value = true;
+        try {
+          // 持续加载直到所有评论都加载完成
+          while (!isEnd) {
+            await onLoadMore();
+            // 等待一下避免请求过快
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+        } catch (e) {
+          SmartDialog.showToast('加载评论失败: $e');
+          return;
+        } finally {
+          isLoadingAllReplies.value = false;
+        }
+      }
+    }
+    
     showOnlyUp.value = !showOnlyUp.value;
     loadingState.refresh();
   }

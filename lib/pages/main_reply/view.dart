@@ -242,25 +242,41 @@ class _MainReplyPageState extends State<MainReplyPage> {
                 Obx(
                   () => TextButton.icon(
                     style: StyleString.buttonStyle,
-                    onPressed: _controller.toggleShowOnlyUp,
-                    icon: Icon(
-                      _controller.showOnlyUp.value
-                          ? Icons.person
-                          : Icons.person_outline,
-                      size: 16,
-                      color: _controller.showOnlyUp.value
-                          ? colorScheme.primary
-                          : secondary,
-                    ),
-                    label: Text(
-                      '只看UP主',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _controller.showOnlyUp.value
-                            ? colorScheme.primary
-                            : secondary,
-                      ),
-                    ),
+                    onPressed: _controller.isLoadingAllReplies.value
+                        ? null
+                        : _controller.toggleShowOnlyUp,
+                    icon: _controller.isLoadingAllReplies.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            _controller.showOnlyUp.value
+                                ? Icons.person
+                                : Icons.person_outline,
+                            size: 16,
+                            color: _controller.showOnlyUp.value
+                                ? colorScheme.primary
+                                : secondary,
+                          ),
+                    label: _controller.isLoadingAllReplies.value
+                        ? Text(
+                            '加载中...',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.outline,
+                            ),
+                          )
+                        : Text(
+                            '只看UP主',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _controller.showOnlyUp.value
+                                  ? colorScheme.primary
+                                  : secondary,
+                            ),
+                          ),
                   ),
                 ),
                 TextButton.icon(

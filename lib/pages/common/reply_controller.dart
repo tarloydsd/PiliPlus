@@ -109,9 +109,18 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   }
 
   // 切换只看UP主
-  void toggleShowOnlyUp() {
+  Future<void> toggleShowOnlyUp() async {
     feedBack();
     showOnlyUp.value = !showOnlyUp.value;
+    
+    // 如果开启只看UP主且未加载完所有评论，先加载所有评论
+    if (showOnlyUp.value && !isEnd) {
+      SmartDialog.showToast('正在加载所有评论以筛选UP主...');
+      while (!isEnd && !isLoading) {
+        await onLoadMore();
+      }
+    }
+    
     loadingState.refresh();
   }
 

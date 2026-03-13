@@ -82,11 +82,20 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   }
 
   @override
-  Future<void> onRefresh() {
+  Future<void> onRefresh() async {
     cursorNext = null;
     subjectControl = null;
     paginationReply = null;
-    return super.onRefresh();
+    await super.onRefresh();
+    
+    // 如果开启了只看UP主，刷新后需要重新加载所有评论
+    if (showOnlyUp.value && !isEnd) {
+      SmartDialog.showLoading(msg: '正在加载所有评论以筛选UP主...');
+      while (!isEnd && !isLoading) {
+        await onLoadMore();
+      }
+      SmartDialog.dismiss();
+    }
   }
 
   // 排序搜索评论
@@ -115,10 +124,11 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     
     // 如果开启只看UP主且未加载完所有评论，先加载所有评论
     if (showOnlyUp.value && !isEnd) {
-      SmartDialog.showToast('正在加载所有评论以筛选UP主...');
+      SmartDialog.showLoading(msg: '正在加载所有评论以筛选UP主...');
       while (!isEnd && !isLoading) {
         await onLoadMore();
       }
+      SmartDialog.dismiss();
     }
     
     loadingState.refresh();

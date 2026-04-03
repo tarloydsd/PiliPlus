@@ -102,23 +102,69 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
-                        TextButton.icon(
-                          style: Style.buttonStyle,
-                          onPressed: _videoReplyController.queryBySort,
-                          icon: Icon(
-                            Icons.sort,
-                            size: 16,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          label: Obx(
-                            () => Text(
-                              _videoReplyController.sortType.value.label,
-                              style: TextStyle(
-                                fontSize: 13,
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              style: Style.buttonStyle,
+                              onPressed: _videoReplyController.onRefresh,
+                              icon: Icon(
+                                Icons.refresh,
+                                size: 16,
                                 color: theme.colorScheme.secondary,
                               ),
+                              label: Text(
+                                '刷新',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.secondary,
+                                ),
+                              ),
                             ),
-                          ),
+                            Obx(
+                              () => TextButton.icon(
+                                style: Style.buttonStyle,
+                                onPressed:
+                                    _videoReplyController.toggleShowOnlyUp,
+                                icon: Icon(
+                                  _videoReplyController.showOnlyUp.value
+                                      ? Icons.person
+                                      : Icons.person_outline,
+                                  size: 16,
+                                  color: _videoReplyController.showOnlyUp.value
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.secondary,
+                                ),
+                                label: Text(
+                                  '只看UP主',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color:
+                                        _videoReplyController.showOnlyUp.value
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.secondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              style: Style.buttonStyle,
+                              onPressed: _videoReplyController.queryBySort,
+                              icon: Icon(
+                                Icons.sort,
+                                size: 16,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              label: Obx(
+                                () => Text(
+                                  _videoReplyController.sortType.value.label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -182,46 +228,78 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
       ),
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverList.builder(
-                itemBuilder: (context, index) {
-                  if (index == response.length) {
-                    _videoReplyController.onLoadMore();
-                    return Container(
-                      height: 125,
-                      alignment: Alignment.center,
-                      margin: EdgeInsets.only(bottom: bottom),
-                      child: Text(
-                        _videoReplyController.isEnd ? '没有更多了' : '加载中...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
+            ? Obx(() {
+                final showOnlyUp = _videoReplyController.showOnlyUp.value;
+                final upMid = _videoReplyController.upMid;
+                final filteredResponse = showOnlyUp && upMid != null
+                    ? response
+                          .where(
+                            (item) =>
+                                item.mid == upMid ||
+                                item.replies.any((reply) => reply.mid == upMid),
+                          )
+                          .toList()
+                    : response;
+                return SliverList.builder(
+                  itemBuilder: (context, index) {
+                    if (index == filteredResponse.length) {
+                      if (showOnlyUp) {
+                        return Container(
+                          height: 125,
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.only(bottom: bottom),
+                          child: Text(
+                            '没有更多了',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        );
+                      }
+                      _videoReplyController.onLoadMore();
+                      return Container(
+                        height: 125,
+                        alignment: Alignment.center,
+                        margin: EdgeInsets.only(bottom: bottom),
+                        child: Text(
+                          _videoReplyController.isEnd ? '没有更多了' : '加载中...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.outline,
+                          ),
                         ),
-                      ),
-                    );
-                  } else {
-                    return ReplyItemGrpc(
-                      replyItem: response[index],
-                      replyLevel: widget.replyLevel,
-                      replyReply: replyReply,
-                      onReply: _videoReplyController.onReply,
-                      onDelete: (item, subIndex) =>
-                          _videoReplyController.onRemove(index, item, subIndex),
-                      upMid: _videoReplyController.upMid,
-                      getTag: () => heroTag,
-                      onCheckReply: (item) => _videoReplyController
-                          .onCheckReply(item, isManual: true),
-                      onToggleTop: (item) => _videoReplyController.onToggleTop(
-                        item,
-                        index,
-                        _videoReplyController.aid,
-                        _videoReplyController.videoType.replyType,
-                      ),
-                    );
-                  }
-                },
-                itemCount: response.length + 1,
-              )
+                      );
+                    } else {
+                      final originalIndex = showOnlyUp
+                          ? response.indexOf(filteredResponse[index])
+                          : index;
+                      return ReplyItemGrpc(
+                        replyItem: filteredResponse[index],
+                        replyLevel: widget.replyLevel,
+                        replyReply: replyReply,
+                        onReply: _videoReplyController.onReply,
+                        onDelete: (item, subIndex) => _videoReplyController
+                            .onRemove(originalIndex, item, subIndex),
+                        upMid: _videoReplyController.upMid,
+                        getTag: () => heroTag,
+                        onCheckReply: (item) => _videoReplyController
+                            .onCheckReply(item, isManual: true),
+                        onToggleTop: (item) =>
+                            _videoReplyController.onToggleTop(
+                              item,
+                              originalIndex,
+                              _videoReplyController.aid,
+                              _videoReplyController.videoType.replyType,
+                            ),
+                      );
+                    }
+                  },
+                  itemCount: filteredResponse.length + 1,
+                );
+              })
             : HttpError(
                 errMsg: '还没有评论',
                 onReload: _videoReplyController.onReload,

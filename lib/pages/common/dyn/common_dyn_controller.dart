@@ -20,7 +20,7 @@ abstract class CommonDynController extends ReplyController<MainListReply> {
   Future<LoadingState<MainListReply>> customGetData() => ReplyGrpc.mainList(
     type: replyType,
     oid: oid,
-    mode: mode,
+    mode: mode.value,
     cursorNext: cursorNext,
     offset: paginationReply?.nextOffset,
   );

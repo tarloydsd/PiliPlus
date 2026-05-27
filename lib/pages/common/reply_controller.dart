@@ -20,7 +20,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   final RxInt count = (-1).obs;
 
   late final Rx<ReplySortType> sortType;
-  late Mode mode;
+  late final Rx<Mode> mode;
 
   final savedReplies = <Object, List<RichTextItem>?>{};
 
@@ -29,6 +29,8 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   SubjectControl? subjectControl;
   FeedPaginationReply? paginationReply;
   late bool hasUpTop = false;
+
+  final RxBool showOnlyUp = false.obs;
 
   @override
   bool? get hasFooter => true;
@@ -45,7 +47,8 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     super.onInit();
     final cacheSortType = Pref.replySortType;
     sortType = cacheSortType.obs;
-    mode = cacheSortType == .time ? Mode.MAIN_LIST_TIME : Mode.MAIN_LIST_HOT;
+    mode =
+        (cacheSortType == .time ? Mode.MAIN_LIST_TIME : Mode.MAIN_LIST_HOT).obs;
   }
 
   @override
@@ -78,11 +81,19 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   }
 
   @override
-  Future<void> onRefresh() {
+  Future<void> onRefresh() async {
     cursorNext = null;
     subjectControl = null;
     paginationReply = null;
-    return super.onRefresh();
+    await super.onRefresh();
+
+    if (showOnlyUp.value && !isEnd) {
+      SmartDialog.showLoading(msg: '正在加载所有评论以筛选UP主...');
+      while (!isEnd && !isLoading) {
+        await onLoadMore();
+      }
+      SmartDialog.dismiss();
+    }
   }
 
   // 排序搜索评论
@@ -91,17 +102,32 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     switch (sortType.value) {
       case ReplySortType.time:
         sortType.value = ReplySortType.hot;
-        mode = Mode.MAIN_LIST_HOT;
+        mode.value = Mode.MAIN_LIST_HOT;
         break;
       case ReplySortType.hot:
         sortType.value = ReplySortType.time;
-        mode = Mode.MAIN_LIST_TIME;
+        mode.value = Mode.MAIN_LIST_TIME;
         break;
       case ReplySortType.select:
         return;
     }
     feedBack();
     onReload();
+  }
+
+  Future<void> toggleShowOnlyUp() async {
+    feedBack();
+    showOnlyUp.value = !showOnlyUp.value;
+
+    if (showOnlyUp.value && !isEnd) {
+      SmartDialog.showLoading(msg: '正在加载所有评论以筛选UP主...');
+      while (!isEnd && !isLoading) {
+        await onLoadMore();
+      }
+      SmartDialog.dismiss();
+    }
+
+    loadingState.refresh();
   }
 
   (bool inputDisable, String? hint) get replyHint {

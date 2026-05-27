@@ -53,7 +53,7 @@ class VideoReplyReplyController extends ReplyController
   @override
   void onInit() {
     super.onInit();
-    mode = Mode.MAIN_LIST_TIME;
+    mode = Mode.MAIN_LIST_TIME.obs;
     queryData();
   }
 
@@ -132,7 +132,7 @@ class VideoReplyReplyController extends ReplyController
           oid: oid,
           root: rpid,
           rpid: id ?? 0,
-          mode: mode,
+          mode: mode.value,
           offset: paginationReply?.nextOffset,
         );
 

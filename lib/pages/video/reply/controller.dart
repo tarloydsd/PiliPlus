@@ -33,7 +33,7 @@ class VideoReplyController extends ReplyController<MainListReply> {
   Future<LoadingState<MainListReply>> customGetData() => ReplyGrpc.mainList(
     oid: isPugv ? videoCtr.epId! : aid,
     type: videoType.replyType,
-    mode: mode,
+    mode: mode.value,
     cursorNext: cursorNext,
     offset: paginationReply?.nextOffset,
   );

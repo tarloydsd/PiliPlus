@@ -53,7 +53,7 @@ class VideoReplyReplyController extends ReplyController
   @override
   void onInit() {
     super.onInit();
-    mode = Mode.MAIN_LIST_TIME.obs;
+    mode.value = Mode.MAIN_LIST_TIME;
     queryData();
   }
 
